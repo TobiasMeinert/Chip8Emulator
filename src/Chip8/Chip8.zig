@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Chip8 = struct {
+pub const Chip8 = struct {
     ram: [ram_size]u8 = [_]u8{0} ** ram_size,
     register: [16]u8 = [_]u8{0} ** 16,
     index_register: u16 = 0,
@@ -10,9 +10,9 @@ const Chip8 = struct {
     delay_timer: u8 = 0,
     sound_timer: u8 = 0,
 
-    const ram_size = 4096;
-    const program_start = 0x200;
-    const program_space = ram_size - program_start;
+    pub const ram_size = 4096;
+    pub const program_start = 0x200;
+    pub const program_space = ram_size - program_start;
 
     pub fn init() Chip8 {
         return Chip8{};

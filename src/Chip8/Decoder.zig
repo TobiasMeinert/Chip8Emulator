@@ -8,10 +8,6 @@ const low_byte: u16 = 0x00FF;
 const low_nibble: u16 = 0x000F;
 
 pub fn decode(opcode: u16) DecodedInstruction {
-    std.debug.print(
-        "\nOpcode & high_nibble {X}, & low_byte {X}\n ",
-        .{ (opcode & high_nibble) >> 8, (opcode & low_byte) },
-    );
     switch ((opcode & high_nibble) >> 8) {
         0x00 => switch (opcode & low_byte) {
             // Drawing

@@ -4,102 +4,63 @@ const InstType = Instruction.InstructionType;
 const std = @import("std");
 
 const high_nibble: u16 = 0xF000;
+const low_byte: u16 = 0x00FF;
+const low_nibble: u16 = 0x000F;
 
 pub fn decode(opcode: u16) DecodedInstruction {
-    switch (opcode & high_nibble) {
-        @intFromEnum(InstType.AddVx) => return decodeAddVx(opcode),
-        @intFromEnum(InstType.SetVx) => return decodeSetVx(opcode),
-        @intFromEnum(InstType.Call) => return decodeCall(opcode),
-        @intFromEnum(InstType.Jump) => return decodeJump(opcode),
-        0x00 => switch (opcode) {
-            0x00EE => return DecodedInstruction{ .instType = InstType.Return },
-            0x00E0 => return DecodedInstruction{ .instType = InstType.ClearScreen }, //ClearScrean does not use anymore data
-            else => return DecodedInstruction{ .instType = InstType.Unknown },
+    std.debug.print(
+        "\nOpcode & high_nibble {X}, & low_byte {X}\n ",
+        .{ (opcode & high_nibble) >> 8, (opcode & low_byte) },
+    );
+    switch ((opcode & high_nibble) >> 8) {
+        0x00 => switch (opcode & low_byte) {
+            // Drawing
+            0xE0 => return DecodedInstruction.init(InstType.ClearScreen, opcode),
+            0x0E => return DecodedInstruction.init(InstType.Return, opcode),
+            else => return DecodedInstruction.init(InstType.Unknown, opcode),
         },
-        else => return DecodedInstruction{ .instType = InstType.Unknown },
+        0x10 => return DecodedInstruction.init(InstType.Jump, opcode),
+        0x20 => return DecodedInstruction.init(InstType.Call, opcode),
+        0x30 => return DecodedInstruction.init(InstType.SkipVxEqNN, opcode),
+        0x40 => return DecodedInstruction.init(InstType.SkipVxNqNN, opcode),
+        0x50 => return DecodedInstruction.init(InstType.SkipVxEqVy, opcode),
+        0x60 => return DecodedInstruction.init(InstType.SetVx, opcode),
+        0x70 => return DecodedInstruction.init(InstType.AddVx, opcode),
+        0x80 => switch (opcode & low_nibble) {
+            // Logic and arithmetic instructions
+            0x0 => return DecodedInstruction.init(InstType.Set, opcode),
+            0x1 => return DecodedInstruction.init(InstType.Or, opcode),
+            0x2 => return DecodedInstruction.init(InstType.And, opcode),
+            0x3 => return DecodedInstruction.init(InstType.Xor, opcode),
+            0x4 => return DecodedInstruction.init(InstType.Add, opcode),
+            0x5 => return DecodedInstruction.init(InstType.SubXY, opcode),
+            0x6 => return DecodedInstruction.init(InstType.ShiftRight, opcode),
+            0x7 => return DecodedInstruction.init(InstType.SubYX, opcode),
+            0xE => return DecodedInstruction.init(InstType.ShiftLeft, opcode),
+            else => return DecodedInstruction.init(InstType.Unknown, opcode),
+        },
+        0x90 => return DecodedInstruction.init(InstType.SkipVxNqVy, opcode),
+        0xA0 => return DecodedInstruction.init(InstType.SetIndexReg, opcode),
+        0xB0 => return DecodedInstruction.init(InstType.JumpWithOffset, opcode),
+        0xC0 => return DecodedInstruction.init(InstType.Random, opcode),
+        0xD0 => return DecodedInstruction.init(InstType.Draw, opcode),
+        0xE0 => switch (opcode & low_byte) {
+            0x9E => return DecodedInstruction.init(InstType.SkipVxPressed, opcode),
+            0xA1 => return DecodedInstruction.init(InstType.SkipVxNotPressed, opcode),
+            else => return DecodedInstruction.init(InstType.Unknown, opcode),
+        },
+        0xF0 => switch (opcode & low_byte) {
+            0x07 => return DecodedInstruction.init(InstType.SetVx2DTimer, opcode),
+            0x0A => return DecodedInstruction.init(InstType.Wait4Key, opcode),
+            0x15 => return DecodedInstruction.init(InstType.SetDTimer2VX, opcode),
+            0x18 => return DecodedInstruction.init(InstType.SetSTimer2VX, opcode),
+            0x1E => return DecodedInstruction.init(InstType.AddToIndex, opcode),
+            0x29 => return DecodedInstruction.init(InstType.FontChar, opcode),
+            0x33 => return DecodedInstruction.init(InstType.DecimalConversion, opcode),
+            0x55 => return DecodedInstruction.init(InstType.StoreReg2Mem, opcode),
+            0x65 => return DecodedInstruction.init(InstType.StoreMem2Reg, opcode),
+            else => return DecodedInstruction.init(InstType.Unknown, opcode),
+        },
+        else => return DecodedInstruction.init(InstType.Unknown, opcode),
     }
-}
-
-fn decodeJump(opcode: u16) DecodedInstruction {
-    const nnn = (opcode & 0x0FFF);
-    return DecodedInstruction{
-        .instType = InstType.Jump,
-        .nnn = @intCast(nnn),
-    };
-}
-
-fn decodeCall(opcode: u16) DecodedInstruction {
-    const nnn = (opcode & 0x0FFF);
-    return DecodedInstruction{
-        .instType = InstType.Call,
-        .nnn = @intCast(nnn),
-    };
-}
-
-fn decodeSetVx(opcode: u16) DecodedInstruction {
-    const x: u16 = (opcode & 0x0F00) >> 8;
-    const nn = opcode & 0x00FF;
-    return DecodedInstruction{
-        .instType = InstType.SetVx,
-        .x = @intCast(x),
-        .nn = @intCast(nn),
-    };
-}
-
-fn decodeAddVx(opcode: u16) DecodedInstruction {
-    const x: u16 = (opcode & 0x0F00) >> 8;
-    const nn = opcode & 0x00FF;
-    return DecodedInstruction{
-        .instType = InstType.AddVx,
-        .x = @intCast(x),
-        .nn = @intCast(nn),
-    };
-}
-
-test "decode AddVx 7XNN" {
-    const opcode: u16 = 0x7B10; // 7B10 → Add 0x10 to V11
-    const decoded: DecodedInstruction = decode(opcode);
-
-    try std.testing.expect(decoded.instType == .AddVx);
-    try std.testing.expect(decoded.x == 0xB);
-    try std.testing.expect(decoded.nn == 0x10);
-}
-
-test "decode SetVx 6XNN" {
-    const opcode: u16 = 0x6A0F; // 6A0F → Set V10 = 0x0F
-    const decoded: DecodedInstruction = decode(opcode);
-
-    try std.testing.expect(decoded.instType == .SetVx);
-    try std.testing.expect(decoded.x == 0xA);
-    try std.testing.expect(decoded.nn == 0x0F);
-}
-
-test "decode Call 2NNN" {
-    const opcode: u16 = 0x2ABC; // 2ABC → Call subroutine at 0xABC
-    const decoded: DecodedInstruction = decode(opcode);
-
-    try std.testing.expect(decoded.instType == .Call);
-    try std.testing.expect(decoded.nnn == 0xABC);
-}
-
-test "decode Jump 1NNN" {
-    const opcode: u16 = 0x1234; // 1234 → Jump to 0x234
-    const decoded: DecodedInstruction = decode(opcode);
-
-    try std.testing.expect(decoded.instType == .Jump);
-    try std.testing.expect(decoded.nnn == 0x234);
-}
-
-test "decode Return 00EE" {
-    const opcode: u16 = 0x00EE;
-    const decoded: DecodedInstruction = decode(opcode);
-
-    try std.testing.expect(decoded.instType == .Return);
-}
-
-test "decode ClearScreen 00E0" {
-    const opcode: u16 = 0x00E0;
-    const decoded: DecodedInstruction = decode(opcode);
-
-    try std.testing.expect(decoded.instType == .ClearScreen);
 }

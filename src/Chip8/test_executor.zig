@@ -1,136 +1,111 @@
 const std = @import("std");
-const testing = @import("std").testing;
+const testing = std.testing;
 const DecodedInstruction = @import("Instruction.zig").DecodedInstruction;
 const InstType = @import("Instruction.zig").InstructionType;
 const ExecuteError = @import("Executer.zig").ExecuteError;
 const execute = @import("Executer.zig").execute;
 const Chip8 = @import("Chip8.zig").Chip8;
 
-test "Executer: unknown instruction" {
+test "Executer ???? Unknown – returns error" {
     var emptyChip = Chip8.init();
     emptyChip.register[0] = 100;
-    const instr = DecodedInstruction{ .instType = InstType.Unknown };
+    const instr = DecodedInstruction.init(InstType.Unknown, 0xFFFF);
     try testing.expectError(ExecuteError.UnknownInstruction, execute(&emptyChip, instr));
 }
 
-// Tests vor AddVx
-test "Executer: AddVx happy" {
+test "Executer ANNN SetIndexRegister – sets I to NNN" {
+    var emptyChip = Chip8.init();
+    const instr = DecodedInstruction.init(InstType.SetIndexReg, 0xABCD);
+    try execute(&emptyChip, instr);
+    try testing.expectEqual(0xBCD, emptyChip.index_register);
+}
+
+test "Executer 7XNN AddVx – happy path" {
     var emptyChip = Chip8.init();
     emptyChip.register[0] = 100;
-    const instr = DecodedInstruction{ .instType = InstType.AddVx, .x = 0, .nn = 12 };
+    const instr = DecodedInstruction.init(InstType.AddVx, 0x700C);
     try execute(&emptyChip, instr);
     try testing.expectEqual(112, emptyChip.register[0]);
 }
 
-test "Executer: AddVx overflow" {
+test "Executer 7XNN AddVx – overflow wraps" {
     var emptyChip = Chip8.init();
     emptyChip.register[0] = 250;
-    const instr = DecodedInstruction{ .instType = InstType.AddVx, .x = 0, .nn = 12 };
+    const instr = DecodedInstruction.init(InstType.AddVx, 0x700C);
     try execute(&emptyChip, instr);
     try testing.expectEqual(6, emptyChip.register[0]);
 }
 
-test "Executer: AddVx InvalidRegisterError" {
+test "Executer 6XNN SetVx – happy path" {
     var emptyChip = Chip8.init();
-    const instr = DecodedInstruction{ .instType = InstType.AddVx, .x = 20, .nn = 12 };
-    try testing.expectError(ExecuteError.InvalidRegister, execute(&emptyChip, instr));
-}
-
-// Test for SetVx
-test "Executer SetVx happy" {
-    var emptyChip = Chip8.init();
-    const instr = DecodedInstruction{ .instType = InstType.SetVx, .x = 0, .nn = 12 };
+    const instr = DecodedInstruction.init(InstType.SetVx, 0x600C);
     try execute(&emptyChip, instr);
     try testing.expectEqual(12, emptyChip.register[0]);
 }
 
-test "Executer: SetVx InvalidRegisterError" {
-    var emptyChip = Chip8.init();
-    const instr = DecodedInstruction{ .instType = InstType.SetVx, .x = 20, .nn = 12 };
-    try testing.expectError(ExecuteError.InvalidRegister, execute(&emptyChip, instr));
-}
-
-test "Executer: Call happy" {
-    var emptyChip = Chip8.init();
-    const instr = DecodedInstruction{ .instType = InstType.Call, .nnn = 0x210 };
-    const exp_stack_entry = emptyChip.program_counter;
-    try execute(&emptyChip, instr);
-    try testing.expectEqual(1, emptyChip.stackpointer);
-    try testing.expectEqual(0x210, emptyChip.program_counter);
-    try testing.expectEqual(exp_stack_entry, emptyChip.stack[0]);
-}
-
-test "Executer: Call error - NNN too large" {
+test "Executer 2NNN Call – happy path" {
     var chip = Chip8.init();
-    const instr = DecodedInstruction{ .instType = InstType.Call, .nnn = Chip8.ram_size + 1 };
+    const call_instr = DecodedInstruction.init(InstType.Call, 0x2310);
+    const exp_stack_entry = chip.program_counter;
+    try execute(&chip, call_instr);
+    try testing.expectEqual(1, chip.stackpointer);
+    try testing.expectEqual(0x310, chip.program_counter);
+    try testing.expectEqual(exp_stack_entry, chip.stack[0]);
+}
+
+test "Executer 2NNN Call – error NNN out of bounds (high)" {
+    var chip = Chip8.init();
+    const instr = DecodedInstruction.init(InstType.Call, 0xF000);
     try testing.expectError(ExecuteError.MemoryOutOfBounds, execute(&chip, instr));
 }
 
-test "Executer: Call error - NNN too small" {
+test "Executer 2NNN Call – error NNN out of bounds (low)" {
     var chip = Chip8.init();
-    const program_start: u16 = 0x200;
-    const instr = DecodedInstruction{ .instType = InstType.Call, .nnn = program_start - 1 };
+    const instr = DecodedInstruction.init(InstType.Call, 0x01FF);
     try testing.expectError(ExecuteError.MemoryOutOfBounds, execute(&chip, instr));
 }
 
-test "Executer: Call error - Stack overflow" {
+test "Executer 2NNN Call – error stack overflow" {
     var chip = Chip8.init();
-
     for (0..16) |i| {
         chip.stack[i] = @intCast(i);
     }
     chip.stackpointer = 16;
-
-    const instr = DecodedInstruction{ .instType = InstType.Call, .nnn = 0x300 };
+    const instr = DecodedInstruction.init(InstType.Call, 0x2300);
     try testing.expectError(ExecuteError.StackOverflow, execute(&chip, instr));
 }
-test "Executer: Call Return happy" {
-    var chip = Chip8.init();
 
+test "Executer 2NNN + 00EE Call/Return – happy path" {
+    var chip = Chip8.init();
     const initial_pc = chip.program_counter;
-    const call_instr = DecodedInstruction{
-        .instType = InstType.Call,
-        .nnn = 0x300,
-    };
+
+    const call_instr = DecodedInstruction.init(InstType.Call, 0x2300);
     try execute(&chip, call_instr);
     try testing.expectEqual(1, chip.stackpointer);
     try testing.expectEqual(0x300, chip.program_counter);
     try testing.expectEqual(initial_pc, chip.stack[0]);
 
-    const return_instr = DecodedInstruction{ .instType = InstType.Return };
+    const return_instr = DecodedInstruction.init(InstType.Return, 0x00EE);
     try execute(&chip, return_instr);
     try testing.expectEqual(0, chip.stackpointer);
     try testing.expectEqual(initial_pc, chip.program_counter);
 }
 
-test "Executer: Jump happy" {
+test "Executer 1NNN Jump – happy path" {
     var chip = Chip8.init();
-    const instr = DecodedInstruction{
-        .instType = InstType.Jump,
-        .nnn = 0x300,
-    };
-
+    const instr = DecodedInstruction.init(InstType.Jump, 0x1300);
     try execute(&chip, instr);
-
     try std.testing.expectEqual(0x300, chip.program_counter);
 }
 
-test "Executer: Jump error - NNN too large" {
+test "Executer 1NNN Jump – error NNN out of bounds (high)" {
     var chip = Chip8.init();
-    const instr = DecodedInstruction{
-        .instType = InstType.Jump,
-        .nnn = Chip8.ram_size + 1,
-    };
-
+    const instr = DecodedInstruction.init(InstType.Jump, 0xF000);
     try std.testing.expectError(ExecuteError.MemoryOutOfBounds, execute(&chip, instr));
 }
 
-test "Executer: Jump error - NNN too small" {
+test "Executer 1NNN Jump – error NNN out of bounds (low)" {
     var chip = Chip8.init();
-    const instr = DecodedInstruction{
-        .instType = InstType.Jump,
-        .nnn = Chip8.program_start - 1, // unterhalb Programmbereich 0x200
-    };
-
+    const instr = DecodedInstruction.init(InstType.Jump, 0x01FF);
     try std.testing.expectError(ExecuteError.MemoryOutOfBounds, execute(&chip, instr));
 }

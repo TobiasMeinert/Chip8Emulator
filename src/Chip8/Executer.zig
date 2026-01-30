@@ -3,8 +3,17 @@ const DecodedInstruction = @import("Instruction.zig").DecodedInstruction;
 const InstType = @import("Instruction.zig").InstructionType;
 const Chip8 = @import("Chip8.zig").Chip8;
 
+pub const ExecuteError = error{
+    InvalidRegister,
+    UnknownInstruction,
+    StackOverflow,
+    StackUnderflow,
+    MemoryOutOfBounds,
+};
+
 pub fn execute(chip: *Chip8, instruction: DecodedInstruction) !void {
-    switch (instruction.instType) {
+    switch (instruction.inst_type) {
+        InstType.SetIndexReg => return executeSetIndexRegister(chip, instruction),
         InstType.AddVx => return executeAddVx(chip, instruction),
         InstType.SetVx => return executeSetVx(chip, instruction),
         InstType.Call => return executeCall(chip, instruction),
@@ -13,6 +22,10 @@ pub fn execute(chip: *Chip8, instruction: DecodedInstruction) !void {
         InstType.ClearScreen => return executeClearScrean(chip),
         else => return ExecuteError.UnknownInstruction,
     }
+}
+
+fn executeSetIndexRegister(chip: *Chip8, instruction: DecodedInstruction) !void {
+    chip.index_register = instruction.nnn;
 }
 
 fn executeAddVx(chip: *Chip8, instruction: DecodedInstruction) !void {
@@ -68,10 +81,3 @@ fn executeClearScrean(chip: *Chip8) !void {
     }
     chip.program_counter += 2;
 }
-pub const ExecuteError = error{
-    InvalidRegister,
-    UnknownInstruction,
-    StackOverflow,
-    StackUnderflow,
-    MemoryOutOfBounds,
-};

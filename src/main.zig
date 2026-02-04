@@ -2,6 +2,7 @@ const std = @import("std");
 const Io = std.Io;
 
 const Chip8Emulator = @import("Chip8Emulator");
+const Chip8 = @import("Chip8/Chip8.zig");
 
 pub fn main(init: std.process.Init) !void {
     // Prints to stderr, unbuffered, ignoring potential errors.
@@ -30,7 +31,10 @@ pub fn main(init: std.process.Init) !void {
 
     try stdout_writer.flush(); // Don't forget to flush!
 }
-
+test {
+    _ = @import("Chip8/test_executor.zig");
+    _ = @import("Chip8/test_decoder.zig");
+}
 test "simple test" {
     const gpa = std.testing.allocator;
     var list: std.ArrayList(i32) = .empty;

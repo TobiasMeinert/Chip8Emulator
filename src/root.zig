@@ -1,4 +1,13 @@
-//! By convention, root.zig is the root source file when making a package.
+        InstType.SetIndexReg => return executeSetIndexRegister(chip, instruction),
+
+        InstType.AddVx => return executeAddVx(chip, instruction),
+        InstType.SetVx => return executeSetVx(chip, instruction),
+        InstType.Call => return executeCall(chip, instruction),
+        InstType.Jump => return executeJump(chip, instruction),
+        InstType.Return => return executeReturn(chip),
+        InstType.ClearScreen => return executeClearScrean(chip),
+        else => return ExecuteError.UnknownInstruction,
+ //! By convention, root.zig is the root source file when making a package.
 const std = @import("std");
 const Io = std.Io;
 

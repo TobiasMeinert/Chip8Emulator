@@ -25,28 +25,28 @@ test "Decode 2NNN Call" {
 
 test "Decode 6XNN SetVx" {
     const d = decode(0x6A0F);
-    try std.testing.expectEqual(InstType.SetVx, d.inst_type);
+    try std.testing.expectEqual(InstType.SetVx2NN, d.inst_type);
     try std.testing.expectEqual(@as(u8, 0xA), d.x);
     try std.testing.expectEqual(@as(u8, 0x0F), d.nn);
 }
 
 test "Decode 7XNN AddVx" {
     const d = decode(0x7B10);
-    try std.testing.expectEqual(InstType.AddVx, d.inst_type);
+    try std.testing.expectEqual(InstType.AddNN2Vx, d.inst_type);
     try std.testing.expectEqual(@as(u8, 0xB), d.x);
     try std.testing.expectEqual(@as(u8, 0x10), d.nn);
 }
 
 test "Decode 8XY0 Set Vx = Vy" {
     const d = decode(0x8120);
-    try std.testing.expectEqual(InstType.Set, d.inst_type);
+    try std.testing.expectEqual(InstType.SetVy2Vx, d.inst_type);
     try std.testing.expectEqual(@as(u8, 1), d.x);
     try std.testing.expectEqual(@as(u8, 2), d.y);
 }
 
 test "Decode 8XY4 Add Vx += Vy" {
     const d = decode(0x8AB4);
-    try std.testing.expectEqual(InstType.Add, d.inst_type);
+    try std.testing.expectEqual(InstType.AddVy2Vx, d.inst_type);
     try std.testing.expectEqual(@as(u8, 0xA), d.x);
     try std.testing.expectEqual(@as(u8, 0xB), d.y);
 }

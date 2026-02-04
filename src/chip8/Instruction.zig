@@ -21,13 +21,13 @@ pub const InstructionType = enum(u16) {
     SkipVxEqVy = 0x5000,
 
     /// 6XNN — Set VX to NN
-    SetVx = 0x6000,
+    SetVx2NN = 0x6000,
 
     /// 7XNN — Add NN to VX (no carry)
-    AddVx = 0x7000,
+    AddNN2Vx = 0x7000,
 
     /// 8XY0 — Set VX = VY
-    Set = 0x8000,
+    SetVy2Vx = 0x8000,
 
     /// 8XY1 — Set VX = VX OR VY
     Or = 0x8001,
@@ -39,16 +39,16 @@ pub const InstructionType = enum(u16) {
     Xor = 0x8003,
 
     /// 8XY4 — Add VY to VX, VF = carry
-    Add = 0x8004,
+    AddVy2Vx = 0x8004,
 
     /// 8XY5 — Subtract VY from VX, VF = NOT borrow
-    SubXY = 0x8005,
+    SubVyFromVx = 0x8005,
 
     /// 8XY6 — Shift VX right by 1, VF = LSB before shift
     ShiftRight = 0x8006,
 
     /// 8XY7 — Set VX = VY - VX, VF = NOT borrow
-    SubYX = 0x8007,
+    SubVxFromVy = 0x8007,
 
     /// 8XYE — Shift VX left by 1, VF = MSB before shift
     ShiftLeft = 0x800E,
@@ -57,7 +57,7 @@ pub const InstructionType = enum(u16) {
     SkipVxNqVy = 0x9000,
 
     /// ANNN — Set index register I = NNN
-    SetIndexReg = 0xA000,
+    SetIndexReg2NNNN = 0xA000,
 
     /// BNNN — Jump to address NNN + V0
     JumpWithOffset = 0xB000,
@@ -86,7 +86,7 @@ pub const InstructionType = enum(u16) {
     /// FX18 — Set sound timer = VX
     SetSTimer2VX = 0xF018,
 
-    /// FX1E — Add VX to index register I
+    /// FX1E — Add VX to index register
     AddToIndex = 0xF01E,
 
     /// FX29 — Set I = location of sprite for digit VX
@@ -108,6 +108,7 @@ pub const DecodedInstruction = struct {
     inst_type: InstructionType,
     x: u8,
     y: u8,
+    n: u8,
     nn: u8,
     nnn: u16,
 
@@ -116,6 +117,7 @@ pub const DecodedInstruction = struct {
             .inst_type = instruction_type,
             .x = @intCast((opcode & 0x0F00) >> 8),
             .y = @intCast((opcode & 0x00F0) >> 4),
+            .n = @intCast(opcode & 0x000F),
             .nn = @intCast((opcode & 0x00FF)),
             .nnn = @intCast((opcode & 0x0FFF)),
         };

@@ -62,7 +62,7 @@ pub const Chip8 = struct {
         std.debug.print("\n", .{});
     }
 
-    fn fetchOpCode(self: *Chip8) !u16 {
+    pub fn fetchOpCode(self: *Chip8) !u16 {
         if (self.program_counter > ram_size - 2) {
             return Chip8Error.ProgramCounterOutOfScope;
         }

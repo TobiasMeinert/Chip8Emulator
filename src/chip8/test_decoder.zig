@@ -53,7 +53,7 @@ test "Decode 8XY4 Add Vx += Vy" {
 
 test "Decode ANNN Set Index Register" {
     const d = decode(0xA123);
-    try std.testing.expectEqual(InstType.SetIndexReg, d.inst_type);
+    try std.testing.expectEqual(InstType.SetIndexReg2NNNN, d.inst_type);
     try std.testing.expectEqual(@as(u16, 0x123), d.nnn);
 }
 

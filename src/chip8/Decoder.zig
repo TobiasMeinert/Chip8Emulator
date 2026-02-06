@@ -36,7 +36,7 @@ pub fn decode(opcode: u16) DecodedInstruction {
             else => return DecodedInstruction.init(InstType.Unknown, opcode),
         },
         0x90 => return DecodedInstruction.init(InstType.SkipVxNqVy, opcode),
-        0xA0 => return DecodedInstruction.init(InstType.SetIndexReg, opcode),
+        0xA0 => return DecodedInstruction.init(InstType.SetIndexReg2NNNN, opcode),
         0xB0 => return DecodedInstruction.init(InstType.JumpWithOffset, opcode),
         0xC0 => return DecodedInstruction.init(InstType.Random, opcode),
         0xD0 => return DecodedInstruction.init(InstType.Draw, opcode),

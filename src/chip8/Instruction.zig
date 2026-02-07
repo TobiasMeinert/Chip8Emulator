@@ -106,6 +106,7 @@ pub const InstructionType = enum(u16) {
 };
 pub const DecodedInstruction = struct {
     inst_type: InstructionType,
+    opcode: u16,
     x: u8,
     y: u8,
     n: u8,
@@ -115,6 +116,7 @@ pub const DecodedInstruction = struct {
     pub fn init(instruction_type: InstructionType, opcode: u16) DecodedInstruction {
         return .{
             .inst_type = instruction_type,
+            .opcode = opcode,
             .x = @intCast((opcode & 0x0F00) >> 8),
             .y = @intCast((opcode & 0x00F0) >> 4),
             .n = @intCast(opcode & 0x000F),

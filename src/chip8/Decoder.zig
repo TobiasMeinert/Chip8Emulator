@@ -12,7 +12,7 @@ pub fn decode(opcode: u16) DecodedInstruction {
         0x00 => switch (opcode & low_byte) {
             // Drawing
             0xE0 => return DecodedInstruction.init(InstType.ClearScreen, opcode),
-            0x0E => return DecodedInstruction.init(InstType.Return, opcode),
+            0xEE => return DecodedInstruction.init(InstType.Return, opcode),
             else => return DecodedInstruction.init(InstType.Unknown, opcode),
         },
         0x10 => return DecodedInstruction.init(InstType.Jump, opcode),

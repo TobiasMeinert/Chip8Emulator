@@ -51,13 +51,17 @@ pub fn execute(chip: *Chip8, instruction: DecodedInstruction) !void {
         InstType.DecimalConversion => return executeDezimalConversion(chip, instruction),
         InstType.StoreReg2Mem => return executeStoreReg2Mem(chip, instruction),
         InstType.StoreMem2Reg => return executeStoreMem2Reg(chip, instruction),
-        else => return ExecuteError.UnknownInstruction,
+        else => {
+            std.debug.print("UNKNOWN INSTRUCTION FOR OPCODE {X}\n", .{instruction.opcode});
+            return ExecuteError.UnknownInstruction;
+        },
     }
 }
 
 /// 00E0 Clear the screen
 fn executeClearScrean(chip: *Chip8) !void {
     @memset(&chip.vram, [_]u1{0} ** 64);
+    chip.draw_flag.store(true, .monotonic);
 }
 
 // 00EE Return
@@ -266,6 +270,7 @@ fn executeDraw(chip: *Chip8, instruction: DecodedInstruction) !void {
             }
         }
     }
+    chip.draw_flag.store(true, .monotonic);
 }
 
 // EX9E Skip if Key is equal Vx

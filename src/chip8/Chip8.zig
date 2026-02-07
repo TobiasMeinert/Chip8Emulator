@@ -21,8 +21,11 @@ pub const Chip8 = struct {
     pub const program_space = ram_size - program_start;
     pub const fontset_start = 0x50;
 
-    pub fn init(original: bool) Chip8 {
-        return Chip8{ .original = original };
+    pub fn init(original: bool) !Chip8 {
+        var chip = Chip8{ .original = original };
+
+        try chip.loadFont(&fontset);
+        return chip;
     }
 
     pub fn loadRom(self: *Chip8, data: []const u8) !void {
@@ -31,6 +34,15 @@ pub const Chip8 = struct {
         }
         for (0..data.len) |i| {
             self.ram[program_start + i] = data[i];
+        }
+    }
+
+    fn loadFont(self: *Chip8, data: []const u8) !void {
+        if (data.len > 80) {
+            return Chip8Error.WrongFonsetData;
+        }
+        for (0..data.len) |i| {
+            self.ram[fontset_start + i] = data[i];
         }
     }
 
@@ -79,10 +91,30 @@ pub const Chip8 = struct {
 const Chip8Error = error{
     RomToBig,
     ProgramCounterOutOfScope,
+    WrongFonsetData,
+};
+
+const fontset = [_]u8{
+    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+    0x20, 0x60, 0x20, 0x20, 0x70, // 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+    0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 };
 
 test "Chip8 loadRom" {
-    var my_chip = Chip8.init(true);
+    var my_chip = try Chip8.init(true);
     const rom = [_]u8{ 0x12, 0x42, 0x34, 0xFF };
     try my_chip.loadRom(&rom);
     try std.testing.expectEqual(0x12, my_chip.ram[0x200]);
@@ -90,13 +122,13 @@ test "Chip8 loadRom" {
 }
 
 test "Chip8 throw RomToBig" {
-    var my_chip = Chip8.init(true);
+    var my_chip = try Chip8.init(true);
     const rom: [Chip8.ram_size]u8 = @splat(0xA);
     try std.testing.expectError(Chip8Error.RomToBig, my_chip.loadRom(&rom));
 }
 
 test "Chip8 fetchOpCode" {
-    var my_chip = Chip8.init(true);
+    var my_chip = try Chip8.init(true);
     const rom = [_]u8{ 0x12, 0x34, 0xAA, 0xFF };
     try my_chip.loadRom(&rom);
     try std.testing.expectEqual(0x1234, my_chip.fetchOpCode());
@@ -104,7 +136,7 @@ test "Chip8 fetchOpCode" {
 }
 
 test "Chip8 fetchOpCode OutOfScopeError" {
-    var my_chip = Chip8.init(true);
+    var my_chip = try Chip8.init(true);
     my_chip.program_counter = Chip8.ram_size;
     try std.testing.expectError(Chip8Error.ProgramCounterOutOfScope, my_chip.fetchOpCode());
 }

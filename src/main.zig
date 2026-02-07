@@ -3,7 +3,7 @@ const std = @import("std");
 const Chip8 = @import("chip8/root.zig");
 const TerminalUi = @import("platform/terminalUI/root.zig").TerminalUi;
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     // Setutp
     // std
     var threaded: std.Io.Threaded = .init_single_threaded;
@@ -11,7 +11,7 @@ pub fn main() !void {
     const io = threaded.io();
 
     var chip = try Chip8.Chip8.init(true);
-    const cpu_hz = 700;
+    const cpu_hz = 300;
     const timer_hz = 60;
     const cpu_step_ns = 1_000_000_000 / cpu_hz;
     const timer_step_ns = 1_000_000_000 / timer_hz;
@@ -20,8 +20,9 @@ pub fn main() !void {
     var timer_timer = try std.time.Timer.start();
 
     var ui = TerminalUi.init(&chip.vram, &chip.draw_flag);
-    const args = std.os.argv();
-    const rom_path = args[1];
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
+    const rom_path = args.ptr[1];
+    std.debug.print("Path? {s}", .{rom_path});
     const rom: []u8 = try loadROM(io, rom_path);
     try chip.loadRom(rom);
     chip.dumpRam(0x0, Chip8.Chip8.ram_size);
@@ -55,7 +56,6 @@ fn loadROM(io: std.Io, rom_path: []const u8) ![]u8 {
     const buffer = try gpa.alloc(u8, Chip8.Chip8.program_space);
 
     var file_reader = rom_file.reader(io, buffer);
-    // file_reader.interface:
     const rom = try file_reader.interface.readAlloc(gpa, len);
     return rom;
 }

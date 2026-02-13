@@ -614,7 +614,7 @@ test "Executer DXYN Draw – draws multiple rows correctly" {
 test "Executer EX9E Skip if Key Vx is pressed" {
     var chip = Chip8.init(true);
     chip.register[2] = 0xB;
-    chip.keys[0xB] = true;
+    chip.keys.press(0xB);
 
     const instr = DecodedInstruction.init(InstType.SkipVxPressed, 0xE29E);
 
@@ -623,10 +623,9 @@ test "Executer EX9E Skip if Key Vx is pressed" {
     try testing.expectEqual(0x202, chip.program_counter);
 }
 
-test "Executer EXA1 Skip if Key Vx is pressed" {
+test "Executer EXA1 Skip if Key Vx is not pressed" {
     var chip = Chip8.init(true);
     chip.register[2] = 0xB;
-    chip.keys[0xB] = false;
 
     const instr = DecodedInstruction.init(InstType.SkipVxNotPressed, 0xE2A1);
 
@@ -650,7 +649,7 @@ test "FX0A key pressed stores key and continues" {
     var chip = Chip8.init(true);
     chip.program_counter = 0x300;
 
-    chip.keys[5] = true;
+    chip.keys.press(5);
 
     const instr = DecodedInstruction.init(InstType.Wait4Key, 0xF10A);
 
@@ -663,8 +662,8 @@ test "FX0A key pressed stores key and continues" {
 test "FX0A multiple keys pressed lowest index stored" {
     var chip = Chip8.init(true);
 
-    chip.keys[7] = true;
-    chip.keys[2] = true;
+    chip.keys.press(7);
+    chip.keys.press(2);
 
     const instr = DecodedInstruction.init(InstType.Wait4Key, 0xF30A);
 

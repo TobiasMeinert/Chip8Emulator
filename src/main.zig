@@ -2,15 +2,17 @@ const std = @import("std");
 
 const Chip8 = @import("chip8/root.zig");
 const TerminalUi = @import("platform/terminalUI/root.zig").TerminalUi;
+const TerminalInput = @import("platform/terminalInput/root.zig").Terminal;
 
+// pub fn main(init: std.process.Init) !void {
 pub fn main(init: std.process.Init) !void {
     // Setutp
     // std
-    var threaded: std.Io.Threaded = .init_single_threaded;
-    defer threaded.deinit();
-    const io = threaded.io();
+    var chip = Chip8.Chip8.init(true);
+    var terminalInput = try TerminalInput.init(&chip.keys.keys);
+    defer terminalInput.disableRawMode();
 
-    var chip = try Chip8.Chip8.init(true);
+    try terminalInput.enableRawMode();
     const cpu_hz = 300;
     const timer_hz = 60;
     const cpu_step_ns = 1_000_000_000 / cpu_hz;
@@ -19,18 +21,18 @@ pub fn main(init: std.process.Init) !void {
     var cpu_timer = try std.time.Timer.start();
     var timer_timer = try std.time.Timer.start();
 
-    var ui = TerminalUi.init(&chip.vram, &chip.draw_flag);
+    var ui = TerminalUi.init(init.io, &chip.vram, &chip.draw_flag);
     const args = try init.minimal.args.toSlice(init.arena.allocator());
     const rom_path = args.ptr[1];
-    std.debug.print("Path? {s}", .{rom_path});
-    const rom: []u8 = try loadROM(io, rom_path);
+    const rom: []u8 = try loadROM(init.io, rom_path);
     try chip.loadRom(rom);
-    chip.dumpRam(0x0, Chip8.Chip8.ram_size);
+    // chip.dumpRam(0x0, Chip8.Chip8.ram_size);
 
     // Loop
     while (true) {
         if (cpu_timer.read() >= cpu_step_ns) {
             cpu_timer.reset();
+            // try terminalInput.handleInput();
             const opcode = try chip.fetchOpCode();
             const instruction = Chip8.Decoder.decode(opcode);
             try Chip8.Executer.execute(&chip, instruction);
@@ -39,10 +41,10 @@ pub fn main(init: std.process.Init) !void {
             timer_timer.reset();
 
             if (chip.delay_timer > 0) chip.delay_timer -= 1;
-            if (chip.sound_timer > 0) chip.delay_timer -= 1;
+            if (chip.sound_timer > 0) chip.sound_timer -= 1;
             ui.renderFrame();
         }
-        try io.sleep(.fromNanoseconds(500), std.Io.Clock.real);
+        try init.io.sleep(.fromNanoseconds(500), std.Io.Clock.real);
     }
 }
 

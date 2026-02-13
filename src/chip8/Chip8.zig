@@ -1,4 +1,5 @@
 const std = @import("std");
+const Keypad = @import("Keypad.zig").Keypad;
 
 pub const Chip8 = struct {
     ram: [ram_size]u8 = @splat(0),
@@ -14,17 +15,17 @@ pub const Chip8 = struct {
     vram: [32][64]u1 = @splat(@splat(0)),
     draw_flag: std.atomic.Value(bool) = .init(false),
 
-    keys: [16]bool = @splat(false),
+    keys: Keypad = Keypad{},
 
     pub const ram_size = 4096;
     pub const program_start = 0x200;
     pub const program_space = ram_size - program_start;
     pub const fontset_start = 0x50;
 
-    pub fn init(original: bool) !Chip8 {
+    pub fn init(original: bool) Chip8 {
         var chip = Chip8{ .original = original };
 
-        try chip.loadFont(&fontset);
+        chip.loadFont(&fontset);
         return chip;
     }
 
@@ -37,10 +38,7 @@ pub const Chip8 = struct {
         }
     }
 
-    fn loadFont(self: *Chip8, data: []const u8) !void {
-        if (data.len > 80) {
-            return Chip8Error.WrongFonsetData;
-        }
+    fn loadFont(self: *Chip8, data: []const u8) void {
         for (0..data.len) |i| {
             self.ram[fontset_start + i] = data[i];
         }
@@ -114,7 +112,7 @@ const fontset = [_]u8{
 };
 
 test "Chip8 loadRom" {
-    var my_chip = try Chip8.init(true);
+    var my_chip = Chip8.init(true);
     const rom = [_]u8{ 0x12, 0x42, 0x34, 0xFF };
     try my_chip.loadRom(&rom);
     try std.testing.expectEqual(0x12, my_chip.ram[0x200]);
@@ -122,13 +120,13 @@ test "Chip8 loadRom" {
 }
 
 test "Chip8 throw RomToBig" {
-    var my_chip = try Chip8.init(true);
+    var my_chip = Chip8.init(true);
     const rom: [Chip8.ram_size]u8 = @splat(0xA);
     try std.testing.expectError(Chip8Error.RomToBig, my_chip.loadRom(&rom));
 }
 
 test "Chip8 fetchOpCode" {
-    var my_chip = try Chip8.init(true);
+    var my_chip = Chip8.init(true);
     const rom = [_]u8{ 0x12, 0x34, 0xAA, 0xFF };
     try my_chip.loadRom(&rom);
     try std.testing.expectEqual(0x1234, my_chip.fetchOpCode());
@@ -136,7 +134,7 @@ test "Chip8 fetchOpCode" {
 }
 
 test "Chip8 fetchOpCode OutOfScopeError" {
-    var my_chip = try Chip8.init(true);
+    var my_chip = Chip8.init(true);
     my_chip.program_counter = Chip8.ram_size;
     try std.testing.expectError(Chip8Error.ProgramCounterOutOfScope, my_chip.fetchOpCode());
 }

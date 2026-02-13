@@ -275,25 +275,24 @@ fn executeDraw(chip: *Chip8, instruction: DecodedInstruction) !void {
 
 // EX9E Skip if Key is equal Vx
 fn executeSkipVxPressed(chip: *Chip8, instruction: DecodedInstruction) void {
-    if (chip.keys[chip.register[instruction.x]] == true) {
+    if (chip.keys.isPressed(chip.register[instruction.x])) {
         chip.program_counter += 2;
     }
 }
 
 // EXA1 Skip if Key is equal Vx
 fn executeSkipVxNotPressed(chip: *Chip8, instruction: DecodedInstruction) void {
-    if (chip.keys[chip.register[instruction.x]] == false) {
+    if (chip.keys.isPressed(chip.register[instruction.x]) == false) {
         chip.program_counter += 2;
     }
 }
 
 //FX0A Wait for key store value in register VX
 fn executeWaitForKey(chip: *Chip8, instruction: DecodedInstruction) void {
-    for (chip.keys, 0..) |key, index| {
-        if (key) {
-            chip.register[instruction.x] = @intCast(index);
-            return;
-        }
+    const bit: u16 = 1;
+    const mask: u16 = bit << @intCast(chip.register[instruction.x]);
+    if ((chip.keys.keys.load(.monotonic) & mask) > 0) {
+        return;
     }
     chip.program_counter -= 2;
 }

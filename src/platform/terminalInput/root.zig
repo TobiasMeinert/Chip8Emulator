@@ -17,6 +17,7 @@ pub const Terminal = struct {
     }
 
     pub fn handleInput(self: *Terminal) !void {
+        // std.debug.print("Handling some Inputs ;)", .{});
         const n = std.posix.read(std.posix.STDIN_FILENO, &self.input_buffer) catch |err| {
             std.debug.print("Got an error?: {}", .{err});
             return;
@@ -24,6 +25,7 @@ pub const Terminal = struct {
         if (n == 1) {
             const key_value: u16 = @intCast(self.input_buffer[0]);
             const key: KeyMapping = @enumFromInt(key_value);
+            std.debug.print("Got Key: {}", .{key});
             switch (key) {
                 KeyMapping.one => self.chip_key_adress.store(1 << 0, .monotonic),
                 KeyMapping.two => self.chip_key_adress.store(1 << 1, .monotonic),
@@ -51,20 +53,32 @@ pub const Terminal = struct {
 
     pub fn enableRawMode(self: *Terminal) !void {
         var raw = self.orig_termios;
-        const lflag: c_uint = @bitCast(c.ECHO | c.ICANON | c.IEXTEN);
-        const iflag: c_uint = @bitCast(c.IXON | c.ICRNL | c.BRKINT | c.INPCK | c.ISTRIP);
-        const oflag: c_uint = @bitCast(c.OPOST);
-        raw.c_lflag &= ~lflag;
-        raw.c_iflag &= ~iflag;
-        raw.c_oflag &= ~oflag;
+
+        // Flags, die wir ausschalten wollen
+        const lflag_mask: c_uint = @bitCast(c.ECHO | c.ICANON | c.IEXTEN);
+        const iflag_mask: c_uint = @bitCast(c.IXON | c.ICRNL | c.BRKINT | c.INPCK | c.ISTRIP);
+        const oflag_mask: c_uint = @bitCast(c.OPOST);
+
+        // Lokal, Input, Output Flags anpassen
+        raw.c_lflag &= ~lflag_mask;
+        raw.c_iflag &= ~iflag_mask;
+        raw.c_oflag &= ~oflag_mask;
         raw.c_cflag |= c.CS8;
 
+        // VMIN=0, VTIME=1 → read() gibt nach 100ms zurück, auch ohne Input
         raw.c_cc[c.VMIN] = 0;
-        raw.c_cc[c.VTIME] = 1; // 100ms timeout
+        raw.c_cc[c.VTIME] = 1; // 0.1s timeout
+
+        // Terminal setzen
         if (c.tcsetattr(0, c.TCSAFLUSH, &raw) != 0) {
             return terminalError.TermiosSetFailed;
         }
-        std.debug.print("\x1b[2J", .{});
+
+        // Bildschirm komplett clear, Cursor Home
+
+        // Optional: STDIN non-blocking explizit setzen (manche Systeme brauchen das)
+        // const flags = c.fcntl(0, c.F_GETFL, 0);
+        // _ = c.fcntl(0, c.F_SETFL, flags | c.O_NONBLOCK);
     }
 
     pub fn disableRawMode(self: *Terminal) void {

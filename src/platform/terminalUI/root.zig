@@ -59,18 +59,3 @@ pub const TerminalUi = struct {
         self.stdout_writer.interface.flush() catch {};
     }
 };
-
-// test "Simple ui test" {
-//     var matrix: [32][64]u1 = @splat(@splat(0));
-//     var flag: std.atomic.Value(bool) = .init(false);
-//
-//     var ui = TerminalUi.init(&matrix, &flag);
-//     ui.renderFrame();
-//     var threaded: std.Io.Threaded = .init_single_threaded;
-//     const io = threaded.io();
-//
-//     try io.sleep(.fromSeconds(5), std.Io.Clock.real);
-//     matrix = @splat(@splat(1));
-//     ui.renderFrame();
-//     try io.sleep(.fromSeconds(10), std.Io.Clock.real);
-// }
